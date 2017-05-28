@@ -204,9 +204,9 @@ int main(void)
 	std::vector<int> out_counts(in.size());
 	int end{0};
 
-	serialRLE(in, out_symbols, out_counts, end);
+	//serialRLE(in, out_symbols, out_counts, end);
 
-	//gpuRLE(in, out_symbols, out_counts, end);
+	gpuRLE(in, out_symbols, out_counts, end);
 
 	out_symbols.resize(end);
 	out_counts.resize(end);
