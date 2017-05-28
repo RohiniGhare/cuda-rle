@@ -173,6 +173,25 @@ void gpuRLE(
 	d_end.cudaFree();
 }
 
+bool verify_rle(
+		std::vector<in_elt_t> &in,
+		std::vector<in_elt_t> &out_symbols,
+		std::vector<int> &out_counts)
+{
+	std::vector<in_elt_t> decompressed{};
+	for (size_t i = 0; i < out_symbols.size(); i++)
+		for (int j = 0; j < out_counts[i]; j++)
+			decompressed.push_back(out_symbols[i]);
+
+	if (decompressed.size() != in.size())
+		return false;
+
+	for (size_t i = 0; i < decompressed.size(); i++)
+		if (decompressed[i] != in[i])
+			return false;
+	return true;
+}
+
 std::vector<in_elt_t> generate_input(int size)
 {
 	std::vector<in_elt_t> result{};
@@ -211,12 +230,19 @@ int main(void)
 	out_symbols.resize(end);
 	out_counts.resize(end);
 
+	/*
 	std::cout << "[";
 	for (int i = 0; i < out_symbols.size(); i++)
 		std::cout << "(" << out_counts[i]
 			 << ", " << out_symbols[i]
 			 << "), ";
 	std::cout << "]" << std::endl;
+	*/
+
+	if (verify_rle(in, out_symbols, out_counts))
+		std::cout << "The output is correct." << std::endl;
+	else
+		std::cout << "The output is INCORRECT." << std::endl;
 
 	return 0;
 }
