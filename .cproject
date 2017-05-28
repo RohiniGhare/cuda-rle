@@ -58,12 +58,14 @@
 			</storageModule>
 			<storageModule moduleId="com.nvidia.cuda.ide.build.project.ICudaProjectConfiguration">
 				<executable devicelink="false">
+					<sass major="2" minor="0"/>
+					<ptx major="2" minor="0"/>
 					<sass major="6" minor="0"/>
 					<ptx major="6" minor="0"/>
 					<ptx major="5" minor="3"/>
 					<sass major="5" minor="3"/>
 				</executable>
-				<editor-arch major="5" minor="3"/>
+				<editor-arch major="2" minor="0"/>
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 		</cconfiguration>
