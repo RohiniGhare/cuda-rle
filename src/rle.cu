@@ -230,6 +230,8 @@ std::vector<in_elt_t> generate_input(size_t size)
 
 int main(void)
 {
+	std::cout << "Build " << 5 << std::endl;
+
 	//std::vector<in_elt_t> in = generate_input(21);
 	std::vector<in_elt_t> in = generate_input(10llu * 1024 * 1024);
 
