@@ -206,7 +206,7 @@ bool verify_rle(
 	return true;
 }
 
-std::vector<in_elt_t> generate_input(int size)
+std::vector<in_elt_t> generate_input(size_t size)
 {
 	std::vector<in_elt_t> result{};
 
@@ -231,7 +231,7 @@ std::vector<in_elt_t> generate_input(int size)
 int main(void)
 {
 	//std::vector<in_elt_t> in = generate_input(21);
-	std::vector<in_elt_t> in = generate_input(2 * 1024 * 1024);
+	std::vector<in_elt_t> in = generate_input(10llu * 1024 * 1024);
 
 	std::vector<in_elt_t> out_symbols(in.size());
 	std::vector<int> out_counts(in.size());
