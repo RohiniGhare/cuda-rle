@@ -92,6 +92,15 @@ void serialRLE(
 			out_counts.data());
 }
 
+void inclusive_prefix_sum(array<uint8_t> d_in, array<int> d_out)
+{
+	hemi::parallel_for(0, d_in.size, [=] HEMI_LAMBDA(size_t i) {
+		d_out.data[i] = 0;
+		for (size_t j = 0; j <= i; j++)
+			d_out.data[i] += d_in.data[j];
+	});
+}
+
 void gpuRLE(
 		std::vector<in_elt_t> &in,
 		std::vector<in_elt_t> &out_symbols,
@@ -119,11 +128,7 @@ void gpuRLE(
 	});
 
 	auto d_scanned_backward_mask = array<int>::new_on_device(in.size());
-	hemi::parallel_for(0, d_in.size, [=] HEMI_LAMBDA(size_t i) {
-		d_scanned_backward_mask.data[i] = 0;
-		for (size_t j = 0; j <= i; j++)
-			d_scanned_backward_mask.data[i] += d_backward_mask.data[j];
-	});
+	inclusive_prefix_sum(d_backward_mask, d_scanned_backward_mask);
 
 	auto d_compacted_backward_mask = array<int>::new_on_device(in.size() + 1);
 	hemi::parallel_for(0, d_in.size, [=] HEMI_LAMBDA(size_t i) {
