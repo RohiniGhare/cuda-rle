@@ -16,6 +16,9 @@
 #include "hemi/kernel.h"
 #include "hemi/parallel_for.h"
 
+#include "cub/util_allocator.cuh"
+#include "cub/device/device_scan.cuh"
+
 using in_elt_t = int;
 
 template<typename elt_t>
@@ -94,11 +97,17 @@ void serialRLE(
 
 void inclusive_prefix_sum(array<uint8_t> d_in, array<int> d_out)
 {
-	hemi::parallel_for(0, d_in.size, [=] HEMI_LAMBDA(size_t i) {
-		d_out.data[i] = 0;
-		for (size_t j = 0; j <= i; j++)
-			d_out.data[i] += d_in.data[j];
-	});
+    cub::CachingDeviceAllocator allocator(true);
+
+    void *d_temp_storage = nullptr;
+    size_t temp_storage_bytes = 0;
+    // Estimate temp_storage_bytes
+    CubDebugExit(cub::DeviceScan::InclusiveSum(
+    		d_temp_storage, temp_storage_bytes, d_in.data, d_out.data, d_in.size));
+    CubDebugExit(allocator.DeviceAllocate(&d_temp_storage, temp_storage_bytes));
+    // Run
+    CubDebugExit(cub::DeviceScan::InclusiveSum(
+    		d_temp_storage, temp_storage_bytes, d_in.data, d_out.data, d_in.size));
 }
 
 void gpuRLE(

@@ -31,6 +31,8 @@
 								<option id="nvcc.compiler.include.paths.417193376" name="Include paths (-I)" superClass="nvcc.compiler.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/rle/src/hemi}&quot;"/>
 									<listOptionValue builtIn="false" value="/home/student/bajarynw/rle/src/hemi"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/rle/src/cub-1.6.4}&quot;"/>
+									<listOptionValue builtIn="false" value="/home/student/bajarynw/rle/src/cub-1.6.4"/>
 								</option>
 								<option id="nvcc.compiler.optionsfile.939884866" name="Command line options file (-optf)" superClass="nvcc.compiler.optionsfile" value="/home/student/bajarynw/rle/src/nvcc-options" valueType="string"/>
 								<inputType id="nvcc.compiler.input.cu.1241343905" superClass="nvcc.compiler.input.cu"/>
