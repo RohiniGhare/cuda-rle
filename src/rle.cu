@@ -169,6 +169,10 @@ void gpuRLE(
 		}
 	});
 
+	// Call it explicitly
+	// to make the profiler not show other calls as taking a long time.
+	hemi::deviceSynchronize();
+
 	d_compacted_backward_mask.cudaFree();
 	d_scanned_backward_mask.cudaFree();
 	d_backward_mask.cudaFree();
