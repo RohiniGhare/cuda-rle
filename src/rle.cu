@@ -159,15 +159,14 @@ void gpuRLE(
 			d_compacted_backward_mask.data[out_pos] = i;
 	});
 
-	checkCuda(cudaMemcpy(&out_end, d_end.data,
-			sizeof(out_end),
-			cudaMemcpyDeviceToHost));
-
-	hemi::parallel_for(0, out_end, [=] HEMI_LAMBDA(size_t i) {
-		int current = d_compacted_backward_mask.data[i];
-		int right = d_compacted_backward_mask.data[i + 1];
-		d_out_counts.data[i] = right - current;
-		d_out_symbols.data[i] = d_in.data[current];
+	// Not hemi::parallel_for because d_end is only on the device now.
+	hemi::launch([=] HEMI_LAMBDA() {
+		for (size_t i: hemi::grid_stride_range(0, *d_end.data)) {
+			int current = d_compacted_backward_mask.data[i];
+			int right = d_compacted_backward_mask.data[i + 1];
+			d_out_counts.data[i] = right - current;
+			d_out_symbols.data[i] = d_in.data[current];
+		}
 	});
 
 	d_compacted_backward_mask.cudaFree();
@@ -179,6 +178,9 @@ void gpuRLE(
 			cudaMemcpyDeviceToHost));
 	checkCuda(cudaMemcpy(out_counts.data(), d_out_counts.data,
 			out_counts.size() * sizeof(*out_counts.data()),
+			cudaMemcpyDeviceToHost));
+	checkCuda(cudaMemcpy(&out_end, d_end.data,
+			sizeof(out_end),
 			cudaMemcpyDeviceToHost));
 
 	d_in.cudaFree();
