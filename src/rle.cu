@@ -106,8 +106,13 @@ void inclusive_prefix_sum(array<uint8_t> d_in, array<int> d_out)
     		d_temp_storage, temp_storage_bytes, d_in.data, d_out.data, d_in.size));
     CubDebugExit(allocator.DeviceAllocate(&d_temp_storage, temp_storage_bytes));
     // Run
-    CubDebugExit(cub::DeviceScan::InclusiveSum(
+    std::cout << "Running prefix sum kernel" << std::endl;
+    auto err = (cub::DeviceScan::InclusiveSum(
     		d_temp_storage, temp_storage_bytes, d_in.data, d_out.data, d_in.size));
+    std::cerr << cudaGetErrorString(err) << std::endl;
+    checkCuda(err);
+    CubDebugExit(err);
+    std::cout << "Done" << std::endl;
 }
 
 void gpuRLE(
