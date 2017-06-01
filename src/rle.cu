@@ -18,6 +18,7 @@
 
 #include "cub/util_allocator.cuh"
 #include "cub/device/device_scan.cuh"
+#include "cub/device/device_run_length_encode.cuh"
 
 using in_elt_t = int;
 
@@ -115,24 +116,15 @@ void inclusive_prefix_sum(array<uint8_t> d_in, array<int> d_out)
     std::cout << "Done" << std::endl;
 }
 
-void gpuRLE(
-		std::vector<in_elt_t> &in,
-		std::vector<in_elt_t> &out_symbols,
-		std::vector<int> &out_counts,
-		int &out_end)
+void deviceRLE(
+		array<in_elt_t> d_in,
+		array<in_elt_t> d_out_symbols,
+		array<int> d_out_counts,
+		array<int> d_end)
 {
-	auto d_in = array<in_elt_t>::new_on_device(in.size());
-	auto d_out_symbols = array<in_elt_t>::new_on_device(in.size());
-	auto d_out_counts = array<int>::new_on_device(in.size());
-	auto d_end = array<int>::new_on_device(1);
-
-	checkCuda(cudaMemcpy(d_in.data, in.data(),
-			d_in.size * sizeof(*d_in.data),
-			cudaMemcpyHostToDevice));
-
 	// Idea: https://erkaman.github.io/posts/cuda_rle.html
 
-	auto d_backward_mask = array<uint8_t>::new_on_device(in.size());
+	auto d_backward_mask = array<uint8_t>::new_on_device(d_in.size);
 	hemi::parallel_for(0, d_backward_mask.size, [=] HEMI_LAMBDA(size_t i) {
 		if (i == 0) {
 			d_backward_mask.data[i] = 1;
@@ -141,10 +133,10 @@ void gpuRLE(
 		d_backward_mask.data[i] = d_in.data[i] != d_in.data[i - 1];
 	});
 
-	auto d_scanned_backward_mask = array<int>::new_on_device(in.size());
+	auto d_scanned_backward_mask = array<int>::new_on_device(d_in.size);
 	inclusive_prefix_sum(d_backward_mask, d_scanned_backward_mask);
 
-	auto d_compacted_backward_mask = array<int>::new_on_device(in.size() + 1);
+	auto d_compacted_backward_mask = array<int>::new_on_device(d_in.size + 1);
 	hemi::parallel_for(0, d_in.size, [=] HEMI_LAMBDA(size_t i) {
 		if (i == 0) {
 			d_compacted_backward_mask.data[i] = 0;
@@ -181,6 +173,46 @@ void gpuRLE(
 	d_compacted_backward_mask.cudaFree();
 	d_scanned_backward_mask.cudaFree();
 	d_backward_mask.cudaFree();
+}
+
+void cubDeviceRLE(
+		array<in_elt_t> d_in,
+		array<in_elt_t> d_out_symbols,
+		array<int> d_out_counts,
+		array<int> d_end)
+{
+	array<uint8_t> d_temp_storage{nullptr, 0};
+	// Estimate d_temp_storage.size
+	CubDebugExit(cub::DeviceRunLengthEncode::Encode(
+			d_temp_storage.data, d_temp_storage.size,
+			d_in.data,
+			d_out_symbols.data, d_out_counts.data, d_end.data, d_in.size));
+	d_temp_storage.cudaMalloc();
+	CubDebugExit(cub::DeviceRunLengthEncode::Encode(
+			d_temp_storage.data, d_temp_storage.size,
+			d_in.data,
+			d_out_symbols.data, d_out_counts.data, d_end.data, d_in.size));
+
+	hemi::deviceSynchronize();
+}
+
+void gpuRLE(
+		std::vector<in_elt_t> &in,
+		std::vector<in_elt_t> &out_symbols,
+		std::vector<int> &out_counts,
+		int &out_end)
+{
+	auto d_in = array<in_elt_t>::new_on_device(in.size());
+	auto d_out_symbols = array<in_elt_t>::new_on_device(in.size());
+	auto d_out_counts = array<int>::new_on_device(in.size());
+	auto d_end = array<int>::new_on_device(1);
+
+	checkCuda(cudaMemcpy(d_in.data, in.data(),
+			d_in.size * sizeof(*d_in.data),
+			cudaMemcpyHostToDevice));
+
+	deviceRLE(d_in, d_out_symbols, d_out_counts, d_end);
+	//cubDeviceRLE(d_in, d_out_symbols, d_out_counts, d_end);
 
 	checkCuda(cudaMemcpy(out_symbols.data(), d_out_symbols.data,
 			out_symbols.size() * sizeof(*out_symbols.data()),
