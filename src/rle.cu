@@ -16,6 +16,7 @@
 #include "hemi/kernel.h"
 #include "hemi/parallel_for.h"
 
+#define CUB_STDERR // For CubDebugExit
 #include "cub/util_allocator.cuh"
 #include "cub/device/device_scan.cuh"
 #include "cub/device/device_run_length_encode.cuh"
