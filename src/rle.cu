@@ -276,7 +276,7 @@ int main(void)
 	std::cout << "Build " << 5 << std::endl;
 
 	//std::vector<in_elt_t> in = generate_input(21);
-	std::vector<in_elt_t> in = generate_input(10llu * 1024 * 1024);
+	std::vector<in_elt_t> in = generate_input(300llu * 1024 * 1024);
 
 	std::vector<in_elt_t> out_symbols(in.size());
 	std::vector<int> out_counts(in.size());
