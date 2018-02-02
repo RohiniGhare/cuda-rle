@@ -23,6 +23,8 @@
 
 using in_elt_t = int;
 
+#define BUILD_NUMBER 12
+
 template<typename elt_t>
 struct array
 {
@@ -278,12 +280,30 @@ std::vector<in_elt_t> generate_input(size_t size)
 	return result;
 }
 
-int main(void)
+void parse_args(int argc, char *argv[], size_t *input_size)
 {
-	std::cout << "Build " << 5 << std::endl;
+	if (argc < 2) {
+		std::cout << "Using the default input size"
+				  << std::endl;
+		return;
+	}
+
+	*input_size = atoll(argv[1]);
+}
+
+int main(int argc, char *argv[])
+{
+	size_t input_size = 200llu * 1024 * 1024;
+
+	parse_args(argc, argv, &input_size);
+
+	std::cout << "Build " << BUILD_NUMBER << std::endl;
+	std::cout << "Using a generated input with " << input_size
+			  << " elements (" << input_size * sizeof(in_elt_t) << " bytes)"
+			  << std::endl;
 
 	//std::vector<in_elt_t> in = generate_input(21);
-	std::vector<in_elt_t> in = generate_input(300llu * 1024 * 1024);
+	std::vector<in_elt_t> in = generate_input(input_size);
 
 	std::vector<in_elt_t> out_symbols(in.size());
 	std::vector<int> out_counts(in.size());
