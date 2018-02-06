@@ -4,7 +4,7 @@
 		<extension point="org.eclipse.cdt.core.LanguageSettingsProvider">
 			<provider copy-of="extension" id="org.eclipse.cdt.ui.UserLanguageSettingsProvider"/>
 			<provider copy-of="extension" id="org.eclipse.ptp.rdt.sync.core.SyncGCCBuildCommandParser"/>
-			<provider class="org.eclipse.ptp.internal.rdt.sync.cdt.core.SyncGCCBuiltinSpecsDetector" console="false" env-hash="1872445666103489" id="org.eclipse.ptp.rdt.sync.core.SyncGCCBuiltinSpecsDetector" keep-relative-paths="false" name="Sync GCC Builtin Compiler Settings" parameter="${COMMAND} -E -P -v -dD ${INPUTS}" prefer-non-shared="true">
+			<provider class="org.eclipse.ptp.internal.rdt.sync.cdt.core.SyncGCCBuiltinSpecsDetector" console="false" env-hash="577253794805017" id="org.eclipse.ptp.rdt.sync.core.SyncGCCBuiltinSpecsDetector" keep-relative-paths="false" name="Sync GCC Builtin Compiler Settings" parameter="${COMMAND} -E -P -v -dD ${INPUTS}" prefer-non-shared="true">
 				<language-scope id="org.eclipse.cdt.core.gcc"/>
 				<language-scope id="org.eclipse.cdt.core.g++"/>
 			</provider>
