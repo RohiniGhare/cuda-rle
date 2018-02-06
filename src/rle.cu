@@ -298,12 +298,13 @@ void parse_args(
 		int argc,
 		char *argv[],
 		size_t *input_size,
+		size_t *input_piece_size,
 		bool *use_cpu_impl,
 		bool *use_cub_impl)
 {
 	int opt;
 
-	while ((opt = getopt(argc, argv, "cus:")) != -1) {
+	while ((opt = getopt(argc, argv, "cus:p:")) != -1) {
 		switch (opt) {
 		case 'c':
 			*use_cpu_impl = true;
@@ -315,8 +316,11 @@ void parse_args(
 		case 's':
 			*input_size = atoll(optarg);
 			break;
+		case 'p':
+			*input_piece_size = atoll(optarg);
+			break;
 		default:
-			fprintf(stderr, "Usage: %s [-c|-u] [-s input_size]\n", argv[0]);
+			fprintf(stderr, "Usage: %s [-c|-u] [-s input_size] [-p input_piece_size]\n", argv[0]);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -325,14 +329,20 @@ void parse_args(
 int main(int argc, char *argv[])
 {
 	size_t input_size = 200llu * 1024 * 1024;
+	size_t input_piece_size = 200llu * 1024 * 1024;
 	bool use_cpu_impl = false;
 	bool use_cub_impl = false;
 
-	parse_args(argc, argv, &input_size, &use_cpu_impl, &use_cub_impl);
+	parse_args(argc, argv,
+			&input_size, &input_piece_size,
+			&use_cpu_impl, &use_cub_impl);
 
 	std::cout << "Build " << BUILD_NUMBER << std::endl;
 	std::cout << "Generating an input with " << input_size
 			  << " elements (" << input_size * sizeof(in_elt_t) << " bytes)"
+			  << std::endl;
+	std::cout << "Will compress " << input_piece_size << " elements ("
+			  << input_piece_size * sizeof(in_elt_t) << " bytes) at a time"
 			  << std::endl;
 
 	if (use_cpu_impl)
