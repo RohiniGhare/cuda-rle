@@ -26,6 +26,9 @@ using in_elt_t = int;
 
 #define BUILD_NUMBER 14
 
+#define CUB_RLE_MAX_WORKING_INPUT_SIZE (274ull * 1024 * 1024)
+#define GPU_RLE_MAX_WORKING_INPUT_SIZE (237ull * 1024 * 1024)
+
 template<typename elt_t>
 struct array
 {
@@ -338,6 +341,25 @@ int main(int argc, char *argv[])
 		std::cout << "Using the Cub GPU implementation" << std::endl;
 	else
 		std::cout << "Using the GPU implementation" << std::endl;
+
+	if (use_cub_impl && input_size > CUB_RLE_MAX_WORKING_INPUT_SIZE) {
+		std::cout << "An input with more than "
+				  << CUB_RLE_MAX_WORKING_INPUT_SIZE
+				  << " elements requested. CUB RLE produces incorrect results"
+				  << " or runs out of memory for such inputs."
+				  << " Terminating without running anything"
+				  << " - consider the test failed." << std::endl;
+		exit(EFBIG);
+	} else if (!use_cpu_impl && input_size > GPU_RLE_MAX_WORKING_INPUT_SIZE) {
+		std::cout << "An input with more than "
+				  << GPU_RLE_MAX_WORKING_INPUT_SIZE
+				  << " elements requested."
+				  << " This GPU RLE implementation produces incorrect results"
+				  << " or runs out of memory for such inputs."
+				  << " Terminating without running anything"
+				  << " - consider the test failed." << std::endl;
+		exit(EFBIG);
+	}
 
 	std::vector<in_elt_t> in = generate_input(input_size);
 
