@@ -253,12 +253,19 @@ bool verify_rle(
 		for (int j = 0; j < out_counts[i]; j++)
 			decompressed.push_back(out_symbols[i]);
 
-	if (decompressed.size() != in.size())
+	if (decompressed.size() != in.size()) {
+		std::cout << "Uncompressed output size (" << decompressed.size()
+				  << ") != input size (" << in.size() << ")." << std::endl;
 		return false;
+	}
 
 	for (size_t i = 0; i < decompressed.size(); i++)
-		if (decompressed[i] != in[i])
+		if (decompressed[i] != in[i]) {
+			std::cout << "Uncompressed output element[" << i
+					  << "] (" << decompressed[i]
+					  << ") != input element (" << in[i] << ")." << std::endl;
 			return false;
+		}
 	return true;
 }
 
