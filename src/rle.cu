@@ -24,7 +24,7 @@
 
 using in_elt_t = int;
 
-#define BUILD_NUMBER 13
+#define BUILD_NUMBER 14
 
 template<typename elt_t>
 struct array
@@ -325,21 +325,23 @@ int main(int argc, char *argv[])
 			  << " elements (" << input_size * sizeof(in_elt_t) << " bytes)"
 			  << std::endl;
 
+	if (use_cpu_impl)
+		std::cout << "Using the CPU implementation" << std::endl;
+	else if (use_cub_impl)
+		std::cout << "Using the Cub GPU implementation" << std::endl;
+	else
+		std::cout << "Using the GPU implementation" << std::endl;
+
 	std::vector<in_elt_t> in = generate_input(input_size);
 
 	std::vector<in_elt_t> out_symbols(in.size());
 	std::vector<int> out_counts(in.size());
 	int end{0};
 
-	if (use_cpu_impl) {
-		std::cout << "Using the CPU implementation" << std::endl;
+	if (use_cpu_impl)
 		cpuRLE(in, out_symbols, out_counts, end);
-	} else {
-		std::cout << "Using the GPU implementation" << std::endl;
-		if (use_cub_impl)
-			std::cout << "Using the Cub GPU implementation" << std::endl;
+	else
 		gpuRLE(in, out_symbols, out_counts, end, use_cub_impl);
-	}
 
 	out_symbols.resize(end);
 	out_counts.resize(end);
