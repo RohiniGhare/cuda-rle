@@ -10,6 +10,7 @@
 
 #include <iostream>
 #include <stdio.h>
+#include <unistd.h>
 #include <vector>
 
 #include "hemi/hemi.h"
@@ -23,7 +24,7 @@
 
 using in_elt_t = int;
 
-#define BUILD_NUMBER 12
+#define BUILD_NUMBER 13
 
 template<typename elt_t>
 struct array
@@ -88,7 +89,7 @@ int cpuRLEImpl(const in_elt_t *in, int n, in_elt_t* symbolsOut, int* countsOut)
 	return outIndex;
 }
 
-void serialRLE(
+void cpuRLE(
 		std::vector<in_elt_t> &in,
 		std::vector<in_elt_t> &out_symbols,
 		std::vector<int> &out_counts,
@@ -209,7 +210,8 @@ void gpuRLE(
 		std::vector<in_elt_t> &in,
 		std::vector<in_elt_t> &out_symbols,
 		std::vector<int> &out_counts,
-		int &out_end)
+		int &out_end,
+		bool use_cub_impl = false)
 {
 	auto d_in = array<in_elt_t>::new_on_device(in.size());
 	auto d_out_symbols = array<in_elt_t>::new_on_device(in.size());
@@ -220,8 +222,10 @@ void gpuRLE(
 			d_in.size * sizeof(*d_in.data),
 			cudaMemcpyHostToDevice));
 
-	deviceRLE(d_in, d_out_symbols, d_out_counts, d_end);
-	//cubDeviceRLE(d_in, d_out_symbols, d_out_counts, d_end);
+	if (use_cub_impl)
+		cubDeviceRLE(d_in, d_out_symbols, d_out_counts, d_end);
+	else
+		deviceRLE(d_in, d_out_symbols, d_out_counts, d_end);
 
 	checkCuda(cudaMemcpy(out_symbols.data(), d_out_symbols.data,
 			out_symbols.size() * sizeof(*out_symbols.data()),
@@ -280,38 +284,62 @@ std::vector<in_elt_t> generate_input(size_t size)
 	return result;
 }
 
-void parse_args(int argc, char *argv[], size_t *input_size)
+void parse_args(
+		int argc,
+		char *argv[],
+		size_t *input_size,
+		bool *use_cpu_impl,
+		bool *use_cub_impl)
 {
-	if (argc < 2) {
-		std::cout << "Using the default input size"
-				  << std::endl;
-		return;
-	}
+	int opt;
 
-	*input_size = atoll(argv[1]);
+	while ((opt = getopt(argc, argv, "cus:")) != -1) {
+		switch (opt) {
+		case 'c':
+			*use_cpu_impl = true;
+			break;
+		case 'u':
+			*use_cub_impl = true;
+			*use_cpu_impl = false;
+			break;
+		case 's':
+			*input_size = atoll(optarg);
+			break;
+		default:
+			fprintf(stderr, "Usage: %s [-c|-u] [-s input_size]\n", argv[0]);
+			exit(EXIT_FAILURE);
+		}
+	}
 }
 
 int main(int argc, char *argv[])
 {
 	size_t input_size = 200llu * 1024 * 1024;
+	bool use_cpu_impl = false;
+	bool use_cub_impl = false;
 
-	parse_args(argc, argv, &input_size);
+	parse_args(argc, argv, &input_size, &use_cpu_impl, &use_cub_impl);
 
 	std::cout << "Build " << BUILD_NUMBER << std::endl;
-	std::cout << "Using a generated input with " << input_size
+	std::cout << "Generating an input with " << input_size
 			  << " elements (" << input_size * sizeof(in_elt_t) << " bytes)"
 			  << std::endl;
 
-	//std::vector<in_elt_t> in = generate_input(21);
 	std::vector<in_elt_t> in = generate_input(input_size);
 
 	std::vector<in_elt_t> out_symbols(in.size());
 	std::vector<int> out_counts(in.size());
 	int end{0};
 
-	//serialRLE(in, out_symbols, out_counts, end);
-
-	gpuRLE(in, out_symbols, out_counts, end);
+	if (use_cpu_impl) {
+		std::cout << "Using the CPU implementation" << std::endl;
+		cpuRLE(in, out_symbols, out_counts, end);
+	} else {
+		std::cout << "Using the GPU implementation" << std::endl;
+		if (use_cub_impl)
+			std::cout << "Using the Cub GPU implementation" << std::endl;
+		gpuRLE(in, out_symbols, out_counts, end, use_cub_impl);
+	}
 
 	out_symbols.resize(end);
 	out_counts.resize(end);
