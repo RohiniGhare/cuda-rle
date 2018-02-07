@@ -18,14 +18,13 @@
 #include "hemi/kernel.h"
 #include "hemi/parallel_for.h"
 
-#define CUB_STDERR // For CubDebugExit
 #include "cub/util_allocator.cuh"
 #include "cub/device/device_scan.cuh"
 #include "cub/device/device_run_length_encode.cuh"
 
 using in_elt_t = int;
 
-#define BUILD_NUMBER 14
+#define BUILD_NUMBER 15
 
 #define CUB_RLE_MAX_WORKING_INPUT_PIECE_SIZE (274ull * 1024 * 1024)
 #define GPU_RLE_MAX_WORKING_INPUT_PIECE_SIZE (237ull * 1024 * 1024)
@@ -122,23 +121,16 @@ void inclusive_prefix_sum(array<uint8_t> d_in, array<int> d_out)
     void *d_temp_storage = nullptr;
     size_t temp_storage_bytes = 0;
     // Estimate temp_storage_bytes
-    CubDebugExit(cub::DeviceScan::InclusiveSum(
+    checkCuda(cub::DeviceScan::InclusiveSum(
     		d_temp_storage, temp_storage_bytes,
-    		d_in.data, d_out.data, d_in.size,
-    		0, true));
-    CubDebugExit(allocator.DeviceAllocate(&d_temp_storage, temp_storage_bytes));
-    CubDebugExit(cudaPeekAtLastError());
-    hemi::deviceSynchronize();
-    // Run
-    std::cout << "Running prefix sum kernel" << std::endl;
-    auto err = (cub::DeviceScan::InclusiveSum(
+    		d_in.data, d_out.data, d_in.size));
+    checkCuda(allocator.DeviceAllocate(
+    		&d_temp_storage, temp_storage_bytes));
+    std::cout << "inclusive_prefix_sum: Running kernel" << std::endl;
+    checkCuda(cub::DeviceScan::InclusiveSum(
     		d_temp_storage, temp_storage_bytes,
-    		d_in.data, d_out.data, d_in.size,
-    		0, true));
-    std::cerr << cudaGetErrorString(err) << std::endl;
-    checkCuda(err);
-    CubDebugExit(err);
-    std::cout << "Done" << std::endl;
+    		d_in.data, d_out.data, d_in.size));
+    std::cout << "inclusive_prefix_sum: Done" << std::endl;
 }
 
 void deviceRLE(
@@ -208,12 +200,12 @@ void cubDeviceRLE(
 {
 	array<uint8_t> d_temp_storage{nullptr, 0};
 	// Estimate d_temp_storage.size
-	CubDebugExit(cub::DeviceRunLengthEncode::Encode(
+	checkCuda(cub::DeviceRunLengthEncode::Encode(
 			d_temp_storage.data, d_temp_storage.size,
 			d_in.data,
 			d_out_symbols.data, d_out_counts.data, d_end.data, d_in.size));
 	d_temp_storage.cudaMalloc();
-	CubDebugExit(cub::DeviceRunLengthEncode::Encode(
+	checkCuda(cub::DeviceRunLengthEncode::Encode(
 			d_temp_storage.data, d_temp_storage.size,
 			d_in.data,
 			d_out_symbols.data, d_out_counts.data, d_end.data, d_in.size));
