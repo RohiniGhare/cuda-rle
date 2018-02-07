@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <vector>
+#include <string>
 
 #include "hemi/hemi.h"
 #include "hemi/kernel.h"
@@ -26,8 +27,8 @@ using in_elt_t = int;
 
 #define BUILD_NUMBER 14
 
-#define CUB_RLE_MAX_WORKING_INPUT_SIZE (274ull * 1024 * 1024)
-#define GPU_RLE_MAX_WORKING_INPUT_SIZE (237ull * 1024 * 1024)
+#define CUB_RLE_MAX_WORKING_INPUT_PIECE_SIZE (274ull * 1024 * 1024)
+#define GPU_RLE_MAX_WORKING_INPUT_PIECE_SIZE (237ull * 1024 * 1024)
 
 template<typename elt_t>
 struct array
@@ -408,6 +409,21 @@ void parse_args(
 	}
 }
 
+void assert_safe_piece_size(
+		size_t piece_size,
+		size_t max_safe_piece_size,
+		std::string impl_name)
+{
+	if (piece_size > max_safe_piece_size) {
+		std::cout << "Compressing the input by pieces of more than "
+				  << max_safe_piece_size << " elements requested. "
+				  << impl_name << " produces incorrect results"
+				  << " or runs out of memory for such inputs."
+				  << " Terminating without running anything." << std::endl;
+		exit(EFBIG);
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	size_t input_size = 200llu * 1024 * 1024;
@@ -434,24 +450,14 @@ int main(int argc, char *argv[])
 	else
 		std::cout << "Using the GPU implementation" << std::endl;
 
-	if (use_cub_impl && input_size > CUB_RLE_MAX_WORKING_INPUT_SIZE) {
-		std::cout << "An input with more than "
-				  << CUB_RLE_MAX_WORKING_INPUT_SIZE
-				  << " elements requested. CUB RLE produces incorrect results"
-				  << " or runs out of memory for such inputs."
-				  << " Terminating without running anything"
-				  << " - consider the test failed." << std::endl;
-		exit(EFBIG);
-	} else if (!use_cpu_impl && input_size > GPU_RLE_MAX_WORKING_INPUT_SIZE) {
-		std::cout << "An input with more than "
-				  << GPU_RLE_MAX_WORKING_INPUT_SIZE
-				  << " elements requested."
-				  << " This GPU RLE implementation produces incorrect results"
-				  << " or runs out of memory for such inputs."
-				  << " Terminating without running anything"
-				  << " - consider the test failed." << std::endl;
-		exit(EFBIG);
-	}
+	if (use_cub_impl)
+		assert_safe_piece_size(
+				input_piece_size, CUB_RLE_MAX_WORKING_INPUT_PIECE_SIZE,
+				"CUB RLE");
+	else if (!use_cpu_impl)
+		assert_safe_piece_size(
+				input_piece_size, GPU_RLE_MAX_WORKING_INPUT_PIECE_SIZE,
+				"This GPU RLE implementation");
 
 	std::vector<in_elt_t> in_owner = generate_input(input_size);
 
