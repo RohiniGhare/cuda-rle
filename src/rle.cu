@@ -47,6 +47,12 @@ struct array
 		return array<elt_t>{v.data(), v.size()};
 	}
 
+	array<elt_t> subview(size_t offset, size_t subview_size)
+	{
+		size_t result_size = std::min(subview_size, size - offset);
+		return array<elt_t>{data + offset, result_size};
+	}
+
 	elt_t &operator[](const size_t i)
 	{
 		return data[i];
@@ -265,21 +271,61 @@ void run_rle_impl(
 		gpuRLE(in, out_symbols, out_counts, out_end, use_cub_impl);
 }
 
-void rle(
-		std::vector<in_elt_t> &in_owner,
+void append_partial_result(
 		std::vector<in_elt_t> &out_symbols,
 		std::vector<int> &out_counts,
+		std::vector<in_elt_t> &full_out_symbols,
+		std::vector<int> &full_out_counts)
+{
+	size_t offset = 0;
+
+	if (full_out_symbols.size() > 0 && out_symbols.size() > 0) {
+		std::cout << "append_partial_result: Piecing together needed"
+				  << std::endl;
+
+		size_t prev_full_end{out_symbols.size() - 1};
+		if (full_out_symbols[prev_full_end] == out_symbols[0]) {
+			full_out_counts[prev_full_end] += out_counts[0];
+			offset = 1;
+		}
+	}
+
+	std::cout << "append_partial_result: Copying partial result" << std::endl;
+	std::copy(out_symbols.begin() + offset, out_symbols.end(),
+			std::back_inserter(full_out_symbols));
+	std::copy(out_counts.begin() + offset, out_counts.end(),
+			std::back_inserter(full_out_counts));
+}
+
+void rle(
+		std::vector<in_elt_t> &in_owner,
+		std::vector<in_elt_t> &full_out_symbols,
+		std::vector<int> &full_out_counts,
 		size_t piece_size,
 		bool use_cpu_impl,
 		bool use_cub_impl)
 {
-	array<in_elt_t> in = array<in_elt_t>::vector_view_on_host(in_owner);
-	int end{0};
+	array<in_elt_t> full_in = array<in_elt_t>::vector_view_on_host(in_owner);
 
-	run_rle_impl(in, out_symbols, out_counts, end, use_cpu_impl, use_cub_impl);
+	for (size_t start = 0; start < in_owner.size(); start += piece_size) {
+		array<in_elt_t> in = full_in.subview(start, piece_size);
+		std::cout << "Partial in start: " << start
+				  << ", size: " << in.size << std::endl;
 
-	out_symbols.resize(end);
-	out_counts.resize(end);
+		// TODO Could actually be allocated once
+		std::vector<in_elt_t> out_symbols(in.size);
+		std::vector<int> out_counts(in.size);
+		int end{0};
+
+		run_rle_impl(in, out_symbols, out_counts, end,
+				use_cpu_impl, use_cub_impl);
+
+		out_symbols.resize(end);
+		out_counts.resize(end);
+
+		append_partial_result(out_symbols, out_counts,
+				full_out_symbols, full_out_counts);
+	}
 }
 
 bool verify_rle(
@@ -409,8 +455,10 @@ int main(int argc, char *argv[])
 
 	std::vector<in_elt_t> in_owner = generate_input(input_size);
 
-	std::vector<in_elt_t> out_symbols(in_owner.size());
-	std::vector<int> out_counts(in_owner.size());
+	std::vector<in_elt_t> out_symbols{};
+	//out_symbols.reserve(in_owner.size());
+	std::vector<int> out_counts{};
+	//out_counts.reserve(in_owner.size());
 
 	rle(in_owner, out_symbols, out_counts,
 			input_piece_size,
