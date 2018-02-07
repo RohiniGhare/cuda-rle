@@ -473,6 +473,7 @@ int main(int argc, char *argv[])
 	std::cout << "]" << std::endl;
 	*/
 
+	std::cout << "Verifying the output" << std::endl;
 	if (verify_rle(in_owner, out_symbols, out_counts))
 		std::cout << "The output is correct." << std::endl;
 	else
