@@ -251,6 +251,37 @@ void gpuRLE(
 	d_end.cudaFree();
 }
 
+void run_rle_impl(
+		array<in_elt_t> in,
+		std::vector<in_elt_t> &out_symbols,
+		std::vector<int> &out_counts,
+		int &out_end,
+		bool use_cpu_impl,
+		bool use_cub_impl)
+{
+	if (use_cpu_impl)
+		cpuRLE(in, out_symbols, out_counts, out_end);
+	else
+		gpuRLE(in, out_symbols, out_counts, out_end, use_cub_impl);
+}
+
+void rle(
+		std::vector<in_elt_t> &in_owner,
+		std::vector<in_elt_t> &out_symbols,
+		std::vector<int> &out_counts,
+		size_t piece_size,
+		bool use_cpu_impl,
+		bool use_cub_impl)
+{
+	array<in_elt_t> in = array<in_elt_t>::vector_view_on_host(in_owner);
+	int end{0};
+
+	run_rle_impl(in, out_symbols, out_counts, end, use_cpu_impl, use_cub_impl);
+
+	out_symbols.resize(end);
+	out_counts.resize(end);
+}
+
 bool verify_rle(
 		std::vector<in_elt_t> &in,
 		std::vector<in_elt_t> &out_symbols,
@@ -331,25 +362,6 @@ void parse_args(
 	}
 }
 
-void rle(
-		std::vector<in_elt_t> &in_owner,
-		std::vector<in_elt_t> &out_symbols,
-		std::vector<int> &out_counts,
-		bool use_cpu_impl,
-		bool use_cub_impl)
-{
-	array<in_elt_t> in = array<in_elt_t>::vector_view_on_host(in_owner);
-	int end{0};
-
-	if (use_cpu_impl)
-		cpuRLE(in, out_symbols, out_counts, end);
-	else
-		gpuRLE(in, out_symbols, out_counts, end, use_cub_impl);
-
-	out_symbols.resize(end);
-	out_counts.resize(end);
-}
-
 int main(int argc, char *argv[])
 {
 	size_t input_size = 200llu * 1024 * 1024;
@@ -400,7 +412,9 @@ int main(int argc, char *argv[])
 	std::vector<in_elt_t> out_symbols(in_owner.size());
 	std::vector<int> out_counts(in_owner.size());
 
-	rle(in_owner, out_symbols, out_counts, use_cpu_impl, use_cub_impl);
+	rle(in_owner, out_symbols, out_counts,
+			input_piece_size,
+			use_cpu_impl, use_cub_impl);
 
 	/*
 	std::cout << "[";
