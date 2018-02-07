@@ -42,6 +42,11 @@ struct array
 		return d_result;
 	}
 
+	static array<elt_t> vector_view_on_host(std::vector<elt_t> &v)
+	{
+		return array<elt_t>{v.data(), v.size()};
+	}
+
 	elt_t &operator[](const size_t i)
 	{
 		return data[i];
@@ -93,12 +98,12 @@ int cpuRLEImpl(const in_elt_t *in, int n, in_elt_t* symbolsOut, int* countsOut)
 }
 
 void cpuRLE(
-		std::vector<in_elt_t> &in,
+		array<in_elt_t> in,
 		std::vector<in_elt_t> &out_symbols,
 		std::vector<int> &out_counts,
 		int &out_end)
 {
-	out_end = cpuRLEImpl(in.data(), in.size(),
+	out_end = cpuRLEImpl(in.data, in.size,
 			out_symbols.data(),
 			out_counts.data());
 }
@@ -210,18 +215,18 @@ void cubDeviceRLE(
 }
 
 void gpuRLE(
-		std::vector<in_elt_t> &in,
+		array<in_elt_t> in,
 		std::vector<in_elt_t> &out_symbols,
 		std::vector<int> &out_counts,
 		int &out_end,
 		bool use_cub_impl = false)
 {
-	auto d_in = array<in_elt_t>::new_on_device(in.size());
-	auto d_out_symbols = array<in_elt_t>::new_on_device(in.size());
-	auto d_out_counts = array<int>::new_on_device(in.size());
+	auto d_in = array<in_elt_t>::new_on_device(in.size);
+	auto d_out_symbols = array<in_elt_t>::new_on_device(in.size);
+	auto d_out_counts = array<int>::new_on_device(in.size);
 	auto d_end = array<int>::new_on_device(1);
 
-	checkCuda(cudaMemcpy(d_in.data, in.data(),
+	checkCuda(cudaMemcpy(d_in.data, in.data,
 			d_in.size * sizeof(*d_in.data),
 			cudaMemcpyHostToDevice));
 
@@ -326,6 +331,25 @@ void parse_args(
 	}
 }
 
+void rle(
+		std::vector<in_elt_t> &in_owner,
+		std::vector<in_elt_t> &out_symbols,
+		std::vector<int> &out_counts,
+		bool use_cpu_impl,
+		bool use_cub_impl)
+{
+	array<in_elt_t> in = array<in_elt_t>::vector_view_on_host(in_owner);
+	int end{0};
+
+	if (use_cpu_impl)
+		cpuRLE(in, out_symbols, out_counts, end);
+	else
+		gpuRLE(in, out_symbols, out_counts, end, use_cub_impl);
+
+	out_symbols.resize(end);
+	out_counts.resize(end);
+}
+
 int main(int argc, char *argv[])
 {
 	size_t input_size = 200llu * 1024 * 1024;
@@ -371,19 +395,12 @@ int main(int argc, char *argv[])
 		exit(EFBIG);
 	}
 
-	std::vector<in_elt_t> in = generate_input(input_size);
+	std::vector<in_elt_t> in_owner = generate_input(input_size);
 
-	std::vector<in_elt_t> out_symbols(in.size());
-	std::vector<int> out_counts(in.size());
-	int end{0};
+	std::vector<in_elt_t> out_symbols(in_owner.size());
+	std::vector<int> out_counts(in_owner.size());
 
-	if (use_cpu_impl)
-		cpuRLE(in, out_symbols, out_counts, end);
-	else
-		gpuRLE(in, out_symbols, out_counts, end, use_cub_impl);
-
-	out_symbols.resize(end);
-	out_counts.resize(end);
+	rle(in_owner, out_symbols, out_counts, use_cpu_impl, use_cub_impl);
 
 	/*
 	std::cout << "[";
@@ -394,7 +411,7 @@ int main(int argc, char *argv[])
 	std::cout << "]" << std::endl;
 	*/
 
-	if (verify_rle(in, out_symbols, out_counts))
+	if (verify_rle(in_owner, out_symbols, out_counts))
 		std::cout << "The output is correct." << std::endl;
 	else
 		std::cout << "The output is INCORRECT." << std::endl;
