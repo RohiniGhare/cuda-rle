@@ -126,11 +126,9 @@ void inclusive_prefix_sum(array<uint8_t> d_in, array<int> d_out)
     		d_in.data, d_out.data, d_in.size));
     checkCuda(allocator.DeviceAllocate(
     		&d_temp_storage, temp_storage_bytes));
-    std::cout << "inclusive_prefix_sum: Running kernel" << std::endl;
     checkCuda(cub::DeviceScan::InclusiveSum(
     		d_temp_storage, temp_storage_bytes,
     		d_in.data, d_out.data, d_in.size));
-    std::cout << "inclusive_prefix_sum: Done" << std::endl;
 }
 
 void deviceRLE(
@@ -273,9 +271,6 @@ void append_partial_result(
 	size_t offset = 0;
 
 	if (full_out_symbols.size() > 0 && out_symbols.size() > 0) {
-		std::cout << "append_partial_result: Piecing together needed"
-				  << std::endl;
-
 		size_t prev_full_end{out_symbols.size() - 1};
 		if (full_out_symbols[prev_full_end] == out_symbols[0]) {
 			full_out_counts[prev_full_end] += out_counts[0];
@@ -283,7 +278,6 @@ void append_partial_result(
 		}
 	}
 
-	std::cout << "append_partial_result: Copying partial result" << std::endl;
 	std::copy(out_symbols.begin() + offset, out_symbols.end(),
 			std::back_inserter(full_out_symbols));
 	std::copy(out_counts.begin() + offset, out_counts.end(),
