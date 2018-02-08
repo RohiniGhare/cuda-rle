@@ -318,18 +318,26 @@ void rle(
 bool verify_rle(
 		std::vector<in_elt_t> &in,
 		std::vector<in_elt_t> &out_symbols,
-		std::vector<int> &out_counts)
+		std::vector<int> &out_counts,
+		bool verify_only_length)
 {
 	std::vector<in_elt_t> decompressed{};
-	for (size_t i = 0; i < out_symbols.size(); i++)
-		for (int j = 0; j < out_counts[i]; j++)
-			decompressed.push_back(out_symbols[i]);
+	size_t decompressed_size{0};
+	for (size_t i = 0; i < out_symbols.size(); i++) {
+		decompressed_size += out_counts[i];
+		if (!verify_only_length)
+			for (int j = 0; j < out_counts[i]; j++)
+				decompressed.push_back(out_symbols[i]);
+	}
 
-	if (decompressed.size() != in.size()) {
+	if (decompressed_size != in.size()) {
 		std::cout << "Uncompressed output size (" << decompressed.size()
 				  << ") != input size (" << in.size() << ")." << std::endl;
 		return false;
 	}
+
+	if (verify_only_length)
+		return true;
 
 	for (size_t i = 0; i < decompressed.size(); i++)
 		if (decompressed[i] != in[i]) {
@@ -369,11 +377,12 @@ void parse_args(
 		size_t *input_size,
 		size_t *input_piece_size,
 		bool *use_cpu_impl,
-		bool *use_cub_impl)
+		bool *use_cub_impl,
+		bool *verify_only_length)
 {
 	int opt;
 
-	while ((opt = getopt(argc, argv, "cus:p:")) != -1) {
+	while ((opt = getopt(argc, argv, "culs:p:")) != -1) {
 		switch (opt) {
 		case 'c':
 			*use_cpu_impl = true;
@@ -382,6 +391,9 @@ void parse_args(
 			*use_cub_impl = true;
 			*use_cpu_impl = false;
 			break;
+		case 'l':
+			*verify_only_length = true;
+			break;
 		case 's':
 			*input_size = atoll(optarg);
 			break;
@@ -389,7 +401,7 @@ void parse_args(
 			*input_piece_size = atoll(optarg);
 			break;
 		default:
-			fprintf(stderr, "Usage: %s [-c|-u] [-s input_size] [-p input_piece_size]\n", argv[0]);
+			fprintf(stderr, "Usage: %s [-c|-u] [-l] [-s input_size] [-p input_piece_size]\n", argv[0]);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -416,10 +428,12 @@ int main(int argc, char *argv[])
 	size_t input_piece_size = 200llu * 1024 * 1024;
 	bool use_cpu_impl = false;
 	bool use_cub_impl = false;
+	bool verify_only_length = false;
 
 	parse_args(argc, argv,
 			&input_size, &input_piece_size,
-			&use_cpu_impl, &use_cub_impl);
+			&use_cpu_impl, &use_cub_impl,
+			&verify_only_length);
 
 	std::cout << "Build " << BUILD_NUMBER << std::endl;
 	std::cout << "Generating an input with " << input_size
@@ -465,11 +479,14 @@ int main(int argc, char *argv[])
 	std::cout << "]" << std::endl;
 	*/
 
-	std::cout << "Verifying the output" << std::endl;
-	if (verify_rle(in_owner, out_symbols, out_counts))
-		std::cout << "The output is correct." << std::endl;
+	std::string verified_part =
+			verify_only_length ? "output length" : "output";
+
+	std::cout << "Verifying the " << verified_part << std::endl;
+	if (verify_rle(in_owner, out_symbols, out_counts, verify_only_length))
+		std::cout << "The " << verified_part << " is correct." << std::endl;
 	else
-		std::cout << "The output is INCORRECT." << std::endl;
+		std::cout << "The " << verified_part << " is INCORRECT." << std::endl;
 
 	return 0;
 }
