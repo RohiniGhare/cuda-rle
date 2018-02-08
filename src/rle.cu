@@ -436,7 +436,7 @@ int main(int argc, char *argv[])
 			&verify_only_length);
 
 	std::cout << "Build " << BUILD_NUMBER << std::endl;
-	std::cout << "Generating an input with " << input_size
+	std::cout << "Will use a generated input with " << input_size
 			  << " elements (" << input_size * sizeof(in_elt_t) << " bytes)"
 			  << std::endl;
 	std::cout << "Will compress " << input_piece_size << " elements ("
@@ -459,6 +459,7 @@ int main(int argc, char *argv[])
 				input_piece_size, GPU_RLE_MAX_WORKING_INPUT_PIECE_SIZE,
 				"This GPU RLE implementation");
 
+	std::cout << "Generating an input" << std::endl;
 	std::vector<in_elt_t> in_owner = generate_input(input_size);
 
 	std::vector<in_elt_t> out_symbols{};
